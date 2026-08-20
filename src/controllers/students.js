@@ -1,0 +1,108 @@
+import {
+  createStudent,
+  deleteStudent,
+  getAllStudents,
+  getStudentById,
+  patchStudent,
+  updateStudent,
+} from '../services/students.js';
+import createHttpError from 'http-errors';
+import { parsePaginationParams } from '../utils/parsePaginationParams.js';
+import { parseSortParams } from '../utils/parseSortParams.js';
+import { parseFilterParams } from '../utils/parseFilterParams.js';
+import { saveFileToUploadDir } from '../utils/saveFileToUploadDir.js';
+
+export const getStudentsController = async (req, res, next) => {
+  const { page, perPage } = parsePaginationParams(req.query);
+  const { sortOrder, sortBy } = parseSortParams(req.query);
+  const filter = parseFilterParams(req.query);
+
+  const students = await getAllStudents({ page, perPage, sortOrder, sortBy, filter });
+
+  res.json({
+    status: 200,
+    message: 'Successfully found students!',
+    data: students,
+  });
+};
+
+export const getStudentByIdController = async (req, res, next) => {
+  const { studentId } = req.params;
+  const student = await getStudentById(studentId);
+
+  if (!student) {
+    throw createHttpError(404, 'Student not found');
+  }
+
+  res.json({
+    status: 200,
+    message: `Successfully found student with id ${studentId}!`,
+    data: student,
+  });
+};
+
+export const createStudentController = async (req, res) => {
+  const student = await createStudent(req.body);
+
+  res.status(201).json({
+    status: 201,
+    message: 'Successfully created student!',
+    data: student,
+  });
+};
+
+export const deleteStudentController = async (req, res) => {
+  const { studentId } = req.params;
+  const student = await deleteStudent(studentId);
+
+  if (!student) {
+    throw createHttpError(404, 'Student not found');
+  }
+
+  res.status(204).send();
+};
+
+export const upsertStudentController = async (req, res, next) => {
+  const { studentId } = req.params;
+  const result = await updateStudent(studentId, req.body);
+
+  if (!result) {
+    next(createHttpError(404, 'Student not found'));
+    return;
+  }
+
+  const { student, isNew } = result;
+
+  const status = isNew ? 201 : 200;
+  const message = isNew ? 'Successfully created student!' : 'Successfully updated student!';
+
+  res.status(status).json({
+    status,
+    message,
+    data: student,
+  });
+};
+
+export const patchStudentController = async (req, res, next) => {
+  const { studentId } = req.params;
+  const photo = req.file;
+
+  let photoUrl;
+
+  if (photo) {
+    photoUrl = await saveFileToUploadDir(photo);
+  }
+
+  const result = await patchStudent(studentId, { ...req.body, photo: photoUrl });
+
+  if (!result) {
+    next(createHttpError(404, 'Student not found'));
+    return;
+  }
+
+  res.json({
+    status: 200,
+    message: `Successfully patched a student!`,
+    data: result.student,
+  });
+};
