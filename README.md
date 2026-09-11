@@ -26,6 +26,7 @@
 - **Валидация данных:** `express-validator`
 - **Конфигурация:** `dotenv`
 
+
 ---
 
 ## 📁 Структура проекта
@@ -48,4 +49,3 @@
 ├── .gitignore
 ├── package.json
 └── README.md
-
